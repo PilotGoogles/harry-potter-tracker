@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harry Potter Reading Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #1a0a2e;
+    --card: #2d1b4e;
+    --card-border: #4a2d7a;
+    --gold: #d4a843;
+    --gold-dim: #a8842f;
+    --text: #e8d5b7;
+    --text-muted: #9b8bb4;
+    --purple: #7b2d8e;
+    --success: #2ecc71;
+    --danger: #c0392b;
+    --radius: 12px;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+    line-height: 1.5;
+  }
+
+  #app { max-width: 600px; margin: 0 auto; }
+
+  /* Header */
+  header {
+    text-align: center;
+    padding: 24px 0 16px;
+    position: relative;
+  }
+  header h1 {
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 1.8rem;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(212,168,67,0.3);
+  }
+  header .subtitle {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 4px;
+  }
+  .sparkle {
+    position: absolute;
+    width: 4px; height: 4px;
+    background: var(--gold);
+    border-radius: 50%;
+    animation: twinkle 2s ease-in-out infinite;
+  }
+  .sparkle:nth-child(2) { top: 10px; left: 15%; animation-delay: 0.5s; }
+  .sparkle:nth-child(3) { top: 20px; right: 20%; animation-delay: 1s; }
+  .sparkle:nth-child(4) { bottom: 5px; left: 30%; animation-delay: 1.5s; }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.2; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .card-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+  }
+
+  /* Stats row */
+  .stats-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .stat {
+    text-align: center;
+    flex: 1;
+    min-width: 80px;
+  }
+  .stat-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  /* Progress bars */
+  .progress-track {
+    background: rgba(255,255,255,0.08);
+    border-radius: 8px;
+    height: 12px;
+    overflow: hidden;
+    margin: 8px 0;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, var(--purple), var(--gold));
+    transition: width 0.5s ease;
+    position: relative;
+  }
+  .progress-fill.complete {
+    background: linear-gradient(90deg, var(--success), #27ae60);
+  }
+  .progress-small .progress-track { height: 8px; }
+  .progress-pct {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-align: right;
+  }
+
+  /* Today's mission */
+  .mission-status {
+    font-size: 0.9rem;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-top: 8px;
+  }
+  .mission-status.ahead { background: rgba(46,204,113,0.15); color: var(--success); }
+  .mission-status.behind { background: rgba(192,57,43,0.15); color: #e74c3c; }
+  .mission-status.on-track { background: rgba(212,168,67,0.15); color: var(--gold); }
+  .mission-status.done { background: rgba(46,204,113,0.2); color: var(--success); }
+
+  .mission-big {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--gold);
+  }
+  .mission-detail {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  /* Input section */
+  .input-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .input-tab {
+    flex: 1;
+    padding: 8px;
+    background: transparent;
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+  }
+  .input-tab.active {
+    background: var(--card-border);
+    color: var(--gold);
+    border-color: var(--gold-dim);
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+    align-items: end;
+  }
+  .input-group { flex: 1; }
+  .input-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+  }
+  input[type="number"], input[type="date"], select {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus {
+    border-color: var(--gold);
+  }
+  select { cursor: pointer; }
+  select option { background: var(--card); color: var(--text); }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--purple), var(--gold-dim));
+    color: #fff;
+  }
+  .btn-primary:hover { filter: brightness(1.15); }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-small {
+    padding: 6px 14px;
+    font-size: 0.8rem;
+  }
+  .btn-danger {
+    background: rgba(192,57,43,0.2);
+    color: #e74c3c;
+    border: 1px solid rgba(192,57,43,0.3);
+  }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--card-border);
+  }
+
+  /* Book cards */
+  .book-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    margin-bottom: 8px;
+    transition: border-color 0.3s;
+  }
+  .book-card.current {
+    border-color: var(--gold-dim);
+    box-shadow: 0 0 12px rgba(212,168,67,0.1);
+  }
+  .book-card.complete {
+    border-color: var(--success);
+    opacity: 0.8;
+  }
+  .book-num {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-muted);
+  }
+  .book-card.current .book-num { background: rgba(212,168,67,0.2); color: var(--gold); }
+  .book-card.complete .book-num { background: rgba(46,204,113,0.2); color: var(--success); }
+  .book-info { flex: 1; min-width: 0; }
+  .book-title-text {
+    font-size: 0.85rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .book-pages {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .book-bar {
+    width: 80px;
+    flex-shrink: 0;
+  }
+  .book-bar .progress-track { height: 6px; margin: 0; }
+  .book-pct {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-align: right;
+    margin-top: 2px;
+  }
+
+  /* Log entries */
+  .log-entry {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.8rem;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-date { color: var(--text-muted); }
+  .log-detail { color: var(--text); }
+  .log-pages { color: var(--gold); font-weight: 600; white-space: nowrap; margin-left: 8px; }
+
+  /* Collapsible */
+  .collapsible-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .collapsible-header .arrow {
+    transition: transform 0.2s;
+    color: var(--text-muted);
+  }
+  .collapsible-header.open .arrow { transform: rotate(180deg); }
+  .collapsible-body { display: none; margin-top: 10px; }
+  .collapsible-body.open { display: block; }
+
+  /* Settings */
+  .setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-label { font-size: 0.85rem; }
+  .setting-desc { font-size: 0.7rem; color: var(--text-muted); }
+
+  /* Toggle switch */
+  .toggle {
+    width: 44px; height: 24px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 12px;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--gold-dim); }
+  .toggle::after {
+    content: '';
+    width: 20px; height: 20px;
+    background: #fff;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px; left: 2px;
+    transition: transform 0.2s;
+  }
+  .toggle.on::after { transform: translateX(20px); }
+
+  /* Celebration */
+  .celebration {
+    text-align: center;
+    padding: 32px 16px;
+  }
+  .celebration .emoji { font-size: 3rem; margin-bottom: 12px; }
+  .celebration h2 { color: var(--gold); font-family: Georgia, serif; }
+  .celebration p { color: var(--text-muted); margin-top: 8px; }
+
+  /* Setup screen */
+  #setup {
+    text-align: center;
+    padding: 40px 16px;
+  }
+  #setup h2 {
+    font-family: Georgia, serif;
+    color: var(--gold);
+    font-size: 1.5rem;
+    margin-bottom: 8px;
+  }
+  #setup p { color: var(--text-muted); margin-bottom: 24px; }
+  #setup .input-group { max-width: 280px; margin: 0 auto 16px; text-align: left; }
+
+  .empty-log { color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 12px; }
+
+  /* Undo toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.85rem;
+    z-index: 100;
+    transition: transform 0.3s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast">
+  <span id="toast-msg"></span>
+  <button class="btn btn-small btn-ghost" onclick="undoLastLog()">Undo</button>
+</div>
+
+<script>
+const BOOKS = [
+  { title: "Philosopher's Stone", pages: 309 },
+  { title: "Chamber of Secrets", pages: 341 },
+  { title: "Prisoner of Azkaban", pages: 435 },
+  { title: "Goblet of Fire", pages: 734 },
+  { title: "Order of the Phoenix", pages: 870 },
+  { title: "Half-Blood Prince", pages: 652 },
+  { title: "Deathly Hallows", pages: 759 }
+];
+const TOTAL_PAGES = BOOKS.reduce((s, b) => s + b.pages, 0);
+const STORAGE_KEY = 'hp-tracker-state';
+
+const MOTIVATIONAL_MESSAGES = [
+  "Dumbledore would be proud!",
+  "The Sorting Hat says: time to read!",
+  "Mischief managed? Not yet!",
+  "After all this time? Always. Keep reading!",
+  "You're a reader, Harry!",
+  "Accio pages! Time to read!",
+  "Expecto Patronum! Your reading streak protects you!",
+  "The Room of Requirement has your book ready!",
+  "Dobby believes in you! Keep reading!",
+  "Ten points to your house for reading!",
+  "The Marauder's Map shows your next chapter!",
+  "Wingardium Levi-READING-sa!",
+  "Even Hermione would be impressed!",
+  "The prophecy foretold you'd finish this month!",
+  "Felix Felicis says now is the time to read!"
+];
+
+let state = null;
+let notifInterval = null;
+let inputMode = 'quick'; // 'quick' or 'set'
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { state = JSON.parse(raw); return true; }
+  } catch(e) {}
+  return false;
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+function initState(startDate, targetDays) {
+  state = {
+    startDate,
+    targetDays,
+    progress: [0, 0, 0, 0, 0, 0, 0],
+    log: [],
+    notificationsEnabled: false,
+    lastNotificationTime: null
+  };
+  saveState();
+}
+
+function totalPagesRead() {
+  return state.progress.reduce((s, p) => s + p, 0);
+}
+
+function currentBookIndex() {
+  for (let i = 0; i < 7; i++) {
+    if (state.progress[i] < BOOKS[i].pages) return i;
+  }
+  return 7; // all done
+}
+
+function daysBetween(a, b) {
+  const msDay = 86400000;
+  const da = new Date(a + 'T00:00:00');
+  const db = new Date(b + 'T00:00:00');
+  return Math.round((db - da) / msDay);
+}
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function calcSchedule() {
+  const read = totalPagesRead();
+  const remaining = TOTAL_PAGES - read;
+  const today = todayStr();
+  const endDate = new Date(state.startDate + 'T00:00:00');
+  endDate.setDate(endDate.getDate() + state.targetDays);
+  const endStr = endDate.getFullYear() + '-' + String(endDate.getMonth()+1).padStart(2,'0') + '-' + String(endDate.getDate()).padStart(2,'0');
+
+  const dayIndex = Math.max(0, daysBetween(state.startDate, today));
+  const daysRemaining = Math.max(1, daysBetween(today, endStr));
+  const dayNum = dayIndex + 1;
+
+  const dailyTarget = Math.ceil(remaining / daysRemaining);
+  const expectedByEOD = Math.ceil(TOTAL_PAGES * Math.min(dayNum, state.targetDays) / state.targetDays);
+  const readToday = pagesReadToday();
+  const readBeforeToday = read - readToday;
+  const todayTarget = Math.max(0, expectedByEOD - readBeforeToday);
+  const todayRemaining = Math.max(0, todayTarget - readToday);
+  const sittings = Math.ceil(todayRemaining / 6);
+
+  let status = 'on-track';
+  let statusMsg = "You're on track! Keep it up!";
+  if (remaining <= 0) {
+    status = 'done';
+    statusMsg = "You've finished all 7 books!";
+  } else if (readToday >= todayTarget) {
+    status = 'ahead';
+    const ahead = readToday - todayTarget;
+    statusMsg = ahead > 0 ? `You're ${ahead} pages ahead today!` : "You've hit today's goal!";
+  } else if (readToday < todayTarget * 0.5 && readToday > 0) {
+    status = 'behind';
+    statusMsg = `${todayRemaining} pages to go. You got this!`;
+  } else if (readBeforeToday < expectedByEOD - todayTarget) {
+    status = 'behind';
+    statusMsg = `You're a bit behind schedule. Keep pushing!`;
+  }
+
+  const pastDeadline = dayIndex >= state.targetDays;
+
+  return {
+    read, remaining, dayNum, daysRemaining, dailyTarget,
+    todayTarget, readToday, todayRemaining, sittings,
+    status, statusMsg, pct: Math.round(read / TOTAL_PAGES * 100),
+    pastDeadline
+  };
+}
+
+function pagesReadToday() {
+  const today = todayStr();
+  return state.log
+    .filter(e => {
+      const d = new Date(e.timestamp);
+      const local = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      return local === today;
+    })
+    .reduce((s, e) => s + e.pagesRead, 0);
+}
+
+function logPages(pages) {
+  if (pages <= 0) return;
+  let remaining = pages;
+  let idx = currentBookIndex();
+  const entries = [];
+
+  while (remaining > 0 && idx < 7) {
+    const book = BOOKS[idx];
+    const cur = state.progress[idx];
+    const canRead = book.pages - cur;
+    const readHere = Math.min(remaining, canRead);
+
+    if (readHere > 0) {
+      state.progress[idx] += readHere;
+      const entry = {
+        timestamp: new Date().toISOString(),
+        bookIndex: idx,
+        fromPage: cur,
+        toPage: cur + readHere,
+        pagesRead: readHere
+      };
+      state.log.push(entry);
+      entries.push(entry);
+      remaining -= readHere;
+    }
+    if (state.progress[idx] >= book.pages) idx++;
+  }
+  saveState();
+  showToast(`Logged ${pages} pages!`);
+  render();
+}
+
+function setBookPage(bookIdx, page) {
+  page = Math.max(0, Math.min(page, BOOKS[bookIdx].pages));
+  const cur = state.progress[bookIdx];
+  const diff = page - cur;
+  if (diff === 0) return;
+
+  state.log.push({
+    timestamp: new Date().toISOString(),
+    bookIndex: bookIdx,
+    fromPage: cur,
+    toPage: page,
+    pagesRead: diff
+  });
+  state.progress[bookIdx] = page;
+  saveState();
+  showToast(diff > 0 ? `Logged ${diff} pages!` : `Adjusted back ${Math.abs(diff)} pages.`);
+  render();
+}
+
+function undoLastLog() {
+  if (state.log.length === 0) return;
+  const last = state.log.pop();
+  state.progress[last.bookIndex] = last.fromPage;
+  saveState();
+  hideToast();
+  render();
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 5000);
+}
+function hideToast() {
+  document.getElementById('toast').classList.remove('show');
+  clearTimeout(toastTimer);
+}
+
+// Notifications
+function requestNotifPermission() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function startNotifTimer() {
+  if (notifInterval) clearInterval(notifInterval);
+  notifInterval = setInterval(checkNotification, 60000);
+}
+
+function checkNotification() {
+  if (!state || !state.notificationsEnabled) return;
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+  const now = Date.now();
+  const last = state.lastNotificationTime ? new Date(state.lastNotificationTime).getTime() : 0;
+  const twoHours = 2 * 60 * 60 * 1000;
+
+  if (now - last >= twoHours) {
+    const sched = calcSchedule();
+    if (sched.status === 'done') return;
+
+    const msg = MOTIVATIONAL_MESSAGES[Math.floor(Math.random() * MOTIVATIONAL_MESSAGES.length)];
+    const body = sched.todayRemaining > 0
+      ? `${msg} ${sched.todayRemaining} pages left today (${sched.sittings} sittings of 6 pages).`
+      : `${msg} You've hit today's goal! Overall: ${sched.pct}% complete.`;
+
+    new Notification('Harry Potter Tracker', { body, icon: '📚' });
+    state.lastNotificationTime = new Date().toISOString();
+    saveState();
+  }
+}
+
+function toggleNotifications() {
+  if (!state.notificationsEnabled) {
+    if (!('Notification' in window)) { alert('Your browser does not support notifications.'); return; }
+    if (Notification.permission === 'denied') { alert('Notifications are blocked. Please enable them in browser settings.'); return; }
+    if (Notification.permission === 'default') {
+      Notification.requestPermission().then(p => {
+        if (p === 'granted') {
+          state.notificationsEnabled = true;
+          state.lastNotificationTime = new Date().toISOString();
+          saveState();
+          render();
+        }
+      });
+      return;
+    }
+    state.notificationsEnabled = true;
+    state.lastNotificationTime = new Date().toISOString();
+  } else {
+    state.notificationsEnabled = false;
+  }
+  saveState();
+  render();
+}
+
+// Rendering
+function render() {
+  if (!state) { renderSetup(); return; }
+  const sched = calcSchedule();
+  const curBook = currentBookIndex();
+  const allDone = curBook >= 7;
+
+  let html = `
+    <header>
+      <span class="sparkle"></span><span class="sparkle"></span><span class="sparkle"></span>
+      <h1>Harry Potter Reading Tracker</h1>
+      <div class="subtitle">${TOTAL_PAGES} pages across 7 books in ${state.targetDays} days</div>
+    </header>`;
+
+  // Dashboard stats
+  html += `
+    <div class="card">
+      <div class="stats-row">
+        <div class="stat">
+          <div class="stat-value">${sched.pastDeadline ? '!' : ''}${sched.dayNum}/${state.targetDays}</div>
+          <div class="stat-label">${sched.pastDeadline ? 'Extended' : 'Day'}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">${sched.read.toLocaleString()}/${TOTAL_PAGES.toLocaleString()}</div>
+          <div class="stat-label">Pages</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">${allDone ? '0' : sched.dailyTarget}</div>
+          <div class="stat-label">Pages/Day</div>
+        </div>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill${allDone ? ' complete' : ''}" style="width:${sched.pct}%"></div>
+      </div>
+      <div class="progress-pct">${sched.pct}% complete</div>
+    </div>`;
+
+  // Celebration or Today's mission
+  if (allDone) {
+    html += `
+      <div class="card celebration">
+        <div class="emoji">⚡🧙‍♂️🎉</div>
+        <h2>Mischief Managed!</h2>
+        <p>You've read all 4,100 pages of Harry Potter! The wizarding world is proud of you.</p>
+      </div>`;
+  } else {
+    html += `
+      <div class="card">
+        <div class="card-title">Today's Mission</div>
+        <div class="mission-big">${sched.todayRemaining} <span style="font-size:0.9rem;font-weight:400;color:var(--text-muted)">pages left today</span></div>
+        <div class="mission-detail">${sched.readToday} of ${sched.todayTarget} pages read today &middot; ${sched.sittings} sitting${sched.sittings !== 1 ? 's' : ''} of 6 pages</div>
+        <div class="progress-track" style="margin-top:8px">
+          <div class="progress-fill${sched.readToday >= sched.todayTarget && sched.todayTarget > 0 ? ' complete' : ''}" style="width:${sched.todayTarget > 0 ? Math.min(100, Math.round(sched.readToday / sched.todayTarget * 100)) : 100}%"></div>
+        </div>
+        <div class="mission-status ${sched.status}">${sched.statusMsg}</div>
+      </div>`;
+
+    // Log input
+    html += `
+      <div class="card">
+        <div class="card-title">Log Reading</div>
+        <div class="input-tabs">
+          <button class="input-tab ${inputMode === 'quick' ? 'active' : ''}" onclick="switchMode('quick')">Quick Log</button>
+          <button class="input-tab ${inputMode === 'set' ? 'active' : ''}" onclick="switchMode('set')">Set Page</button>
+        </div>
+        <div id="input-quick" style="display:${inputMode === 'quick' ? 'block' : 'none'}">
+          <div class="input-row">
+            <div class="input-group">
+              <label>Pages just read</label>
+              <input type="number" id="quick-pages" min="1" max="${sched.remaining}" placeholder="e.g. 47" inputmode="numeric">
+            </div>
+            <button class="btn btn-primary" onclick="doQuickLog()">Log</button>
+          </div>
+        </div>
+        <div id="input-set" style="display:${inputMode === 'set' ? 'block' : 'none'}">
+          <div class="input-row" style="flex-wrap:wrap">
+            <div class="input-group">
+              <label>Book</label>
+              <select id="set-book" onchange="onBookSelect()">
+                ${BOOKS.map((b, i) => `<option value="${i}" ${i === curBook ? 'selected' : ''}>${i+1}. ${b.title}</option>`).join('')}
+              </select>
+            </div>
+            <div class="input-group" style="max-width:120px">
+              <label>Current page</label>
+              <input type="number" id="set-page" min="0" max="${BOOKS[curBook]?.pages || 759}" value="${state.progress[curBook] || 0}" inputmode="numeric">
+            </div>
+            <button class="btn btn-primary" onclick="doSetPage()">Set</button>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Book progress
+  html += `<div class="card"><div class="card-title">Book Progress</div>`;
+  BOOKS.forEach((book, i) => {
+    const pg = state.progress[i];
+    const pct = Math.round(pg / book.pages * 100);
+    const isCurrent = i === curBook;
+    const isComplete = pg >= book.pages;
+    const cls = isComplete ? 'complete' : (isCurrent ? 'current' : '');
+    html += `
+      <div class="book-card ${cls}">
+        <div class="book-num">${isComplete ? '✓' : i + 1}</div>
+        <div class="book-info">
+          <div class="book-title-text">${book.title}</div>
+          <div class="book-pages">${pg}/${book.pages} pages</div>
+        </div>
+        <div class="book-bar">
+          <div class="progress-track"><div class="progress-fill${isComplete ? ' complete' : ''}" style="width:${pct}%"></div></div>
+          <div class="book-pct">${pct}%</div>
+        </div>
+      </div>`;
+  });
+  html += `</div>`;
+
+  // Reading log
+  const recentLogs = [...state.log].reverse().slice(0, 20);
+  html += `
+    <div class="card">
+      <div class="collapsible-header${state.log.length ? '' : ''}" onclick="toggleCollapse(this)">
+        <div class="card-title" style="margin:0">Reading Log</div>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="collapsible-body">`;
+  if (recentLogs.length === 0) {
+    html += `<div class="empty-log">No reading logged yet. Start reading!</div>`;
+  } else {
+    recentLogs.forEach(e => {
+      const d = new Date(e.timestamp);
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const timeStr = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      html += `
+        <div class="log-entry">
+          <span class="log-date">${dateStr} ${timeStr}</span>
+          <span class="log-detail">Book ${e.bookIndex + 1}, pg ${e.fromPage}-${e.toPage}</span>
+          <span class="log-pages">+${e.pagesRead}</span>
+        </div>`;
+    });
+  }
+  html += `</div></div>`;
+
+  // Settings
+  html += `
+    <div class="card">
+      <div class="collapsible-header" onclick="toggleCollapse(this)">
+        <div class="card-title" style="margin:0">Settings</div>
+        <span class="arrow">▼</span>
+      </div>
+      <div class="collapsible-body">
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Motivational Notifications</div>
+            <div class="setting-desc">Every 2 hours while reading</div>
+          </div>
+          <div class="toggle ${state.notificationsEnabled ? 'on' : ''}" onclick="toggleNotifications()"></div>
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Start Date</div>
+            <div class="setting-desc">${state.startDate}</div>
+          </div>
+          <input type="date" value="${state.startDate}" style="width:auto" onchange="updateStartDate(this.value)">
+        </div>
+        <div class="setting-row">
+          <div>
+            <div class="setting-label">Target Days</div>
+            <div class="setting-desc">${state.targetDays} days to finish</div>
+          </div>
+          <input type="number" value="${state.targetDays}" min="1" max="365" style="width:80px" onchange="updateTargetDays(+this.value)">
+        </div>
+        <div class="setting-row" style="justify-content:center;border:none;padding-top:16px">
+          <button class="btn btn-danger btn-small" onclick="resetProgress()">Reset Progress</button>
+          <button class="btn btn-danger btn-small" style="margin-left:8px" onclick="fullReset()">Full Reset</button>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('app').innerHTML = html;
+}
+
+function renderSetup() {
+  const today = todayStr();
+  document.getElementById('app').innerHTML = `
+    <header>
+      <span class="sparkle"></span><span class="sparkle"></span><span class="sparkle"></span>
+      <h1>Harry Potter Reading Tracker</h1>
+    </header>
+    <div id="setup">
+      <h2>Welcome, Wizard!</h2>
+      <p>Let's set up your reading journey through all 7 Harry Potter books (${TOTAL_PAGES.toLocaleString()} pages).</p>
+      <div class="input-group">
+        <label>Start Date</label>
+        <input type="date" id="setup-start" value="${today}">
+      </div>
+      <div class="input-group">
+        <label>Days to Finish</label>
+        <input type="number" id="setup-days" value="30" min="1" max="365">
+      </div>
+      <button class="btn btn-primary" onclick="doSetup()" style="margin-top:8px;padding:12px 32px;font-size:1rem">Begin the Journey</button>
+    </div>`;
+}
+
+// Actions
+function doSetup() {
+  const start = document.getElementById('setup-start').value;
+  const days = parseInt(document.getElementById('setup-days').value) || 30;
+  initState(start, days);
+  render();
+  startNotifTimer();
+}
+
+function switchMode(mode) {
+  inputMode = mode;
+  render();
+}
+
+function doQuickLog() {
+  const input = document.getElementById('quick-pages');
+  const pages = parseInt(input.value);
+  if (!pages || pages <= 0) return;
+  logPages(pages);
+}
+
+function doSetPage() {
+  const bookIdx = parseInt(document.getElementById('set-book').value);
+  const page = parseInt(document.getElementById('set-page').value);
+  if (isNaN(page)) return;
+  setBookPage(bookIdx, page);
+}
+
+function onBookSelect() {
+  const bookIdx = parseInt(document.getElementById('set-book').value);
+  const pageInput = document.getElementById('set-page');
+  pageInput.max = BOOKS[bookIdx].pages;
+  pageInput.value = state.progress[bookIdx];
+}
+
+function toggleCollapse(el) {
+  el.classList.toggle('open');
+  const body = el.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+function updateStartDate(val) {
+  state.startDate = val;
+  saveState();
+  render();
+}
+
+function updateTargetDays(val) {
+  if (val < 1) val = 1;
+  state.targetDays = val;
+  saveState();
+  render();
+}
+
+function resetProgress() {
+  if (!confirm('Reset all reading progress? Your log will be cleared.')) return;
+  state.progress = [0, 0, 0, 0, 0, 0, 0];
+  state.log = [];
+  saveState();
+  render();
+}
+
+function fullReset() {
+  if (!confirm('Completely reset? This removes all data.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = null;
+  render();
+}
+
+// Handle Enter key in quick log
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.id === 'quick-pages') doQuickLog();
+  if (e.key === 'Enter' && e.target.id === 'set-page') doSetPage();
+});
+
+// Init
+if (loadState()) {
+  render();
+  startNotifTimer();
+} else {
+  renderSetup();
+}
+</script>
+</body>
+</html>
